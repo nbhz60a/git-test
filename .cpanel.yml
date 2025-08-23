@@ -1,0 +1,43 @@
+---
+# This is a cPanel deployment configuration file.
+# It specifies which files should be deployed from your GitHub repository
+# to your cPanel hosting environment.
+
+deployment:
+  tasks:
+    # Step 1: Define the absolute path to your deployment directory.
+    # This has been updated with your cPanel username.
+    - export DEPLOYPATH=/home/bisonrec/public_html/
+
+    # --- CHOOSE YOUR DEPLOYMENT STRATEGY BELOW ---
+    # The strategy below is a common starting point.
+    # You can safely delete or comment out the sections you don't need.
+
+    # --- STRATEGY 1: For simple static sites (HTML, CSS, JS files) ---
+    # Use this if you are deploying individual files and folders directly.
+    # The '-R' flag copies directories recursively (all files and folders inside).
+    # --- UNCOMMENT AND EDIT THE LINES BELOW TO MATCH YOUR FILES ---
+    - /bin/cp index.html $DEPLOYPATH
+    # - /bin/cp about.html $DEPLOYPATH
+    - /bin/cp -R css $DEPLOYPATH
+    - /bin/cp -R images $DEPLOYPATH
+    - /bin/cp -R js $DEPLOYPATH
+
+
+    # --- STRATEGY 2: For compiled projects (React, Vue, Angular, etc.) ---
+    # Use this if your project has a build step that generates files in a
+    # specific folder (commonly named 'dist', 'build', or 'public').
+    # This command copies the *contents* of your build folder to the DEPLOYPATH.
+    # IMPORTANT: The '/.' at the end is crucial. It copies the contents of
+    # the directory, not the directory itself.
+    #
+    # - /bin/cp -R build/. $DEPLOYPATH
+
+
+    # --- STRATEGY 3: For PHP / Laravel projects ---
+    # This is a more complex example where you might copy the entire repository
+    # but need to exclude certain files/directories like '.git' or 'node_modules'.
+    # For this, 'rsync' is often a better and safer tool than 'cp'.
+    # Note: Check with your hosting provider if rsync is available.
+    #
+    # - /usr/bin/rsync -av --exclude='.git' --exclude='node_modules' --exclude='.cpanel.yml' $HOME/repositories/your-repo-name/ $DEPLOYPATH
