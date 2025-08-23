@@ -2,10 +2,168 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My GitHub Site</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commercial Lease Cost Analyzer</title>
+    <!-- CDN Scripts -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-    <h1>Hello, world!</h1>
-    <p>This is the first page in your new repo.</p>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // Helper function to format numbers as currency
+      const formatCurrency = (value) => {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+      };
+
+      // Main App Component
+      function CommercialLeaseComparison() {
+        // --- State for Input Fields ---
+        const [leaseTermMonths, setLeaseTermMonths] = useState(60);
+        const [freeRentMonths, setFreeRentMonths] = useState(3);
+        const [rentableSquareFeet, setRentableSquareFeet] = useState(5000);
+        const [annualBaseRentalRatePerSF, setAnnualBaseRentalRatePerSF] = useState(30);
+        const [tiAllowancePerSF, setTiAllowancePerSF] = useState(50);
+        const [estimatedConstructionCostsTotal, setEstimatedConstructionCostsTotal] = useState(300000);
+
+        // --- State for Financial Summary ---
+        const [summary, setSummary] = useState({
+          totalGrossBaseRent: 0, valueOfFreeRent: 0, effectiveGrossBaseRent: 0, totalTIAllowanceValue: 0,
+          netConstructionCostToTenant: 0, totalProjectedOutlay: 0, monthlyEffectiveRent: 0, annualEffectiveRentPerSF: 0,
+        });
+
+        // --- Calculation Logic ---
+        const handleCalculate = () => {
+          const term = Number(leaseTermMonths) || 0;
+          const freeMonths = Number(freeRentMonths) || 0;
+          const rsf = Number(rentableSquareFeet) || 0;
+          const annualRateSF = Number(annualBaseRentalRatePerSF) || 0;
+          const tiRateSF = Number(tiAllowancePerSF) || 0;
+          const constCosts = Number(estimatedConstructionCostsTotal) || 0;
+
+          if (term <= 0 || rsf <= 0) {
+            setSummary({
+              totalGrossBaseRent: 0, valueOfFreeRent: 0, effectiveGrossBaseRent: 0, totalTIAllowanceValue: 0,
+              netConstructionCostToTenant: 0, totalProjectedOutlay: 0, monthlyEffectiveRent: 0, annualEffectiveRentPerSF: 0,
+            });
+            return;
+          }
+
+          const monthlyBaseRentalRatePerSF = annualRateSF / 12;
+          const totalMonthlyBaseRentForAllSF = rsf * monthlyBaseRentalRatePerSF;
+          const calculatedTotalGrossBaseRent = totalMonthlyBaseRentForAllSF * term;
+          const calculatedValueOfFreeRent = totalMonthlyBaseRentForAllSF * Math.min(freeMonths, term);
+          const calculatedEffectiveGrossBaseRent = calculatedTotalGrossBaseRent - calculatedValueOfFreeRent;
+          const calculatedTotalTIAllowanceValue = tiRateSF * rsf;
+          const calculatedNetConstructionCostToTenant = Math.max(0, constCosts - calculatedTotalTIAllowanceValue);
+          const calculatedTotalProjectedOutlay = calculatedEffectiveGrossBaseRent + calculatedNetConstructionCostToTenant;
+          const actualRentPayingMonths = term - Math.min(freeMonths, term);
+          const calculatedMonthlyEffectiveRent = actualRentPayingMonths > 0 ? calculatedEffectiveGrossBaseRent / actualRentPayingMonths : 0;
+          const calculatedAnnualEffectiveRentPerSF = term > 0 ? (calculatedEffectiveGrossBaseRent / rsf) / (term / 12) : 0;
+
+          setSummary({
+            totalGrossBaseRent: calculatedTotalGrossBaseRent, valueOfFreeRent: calculatedValueOfFreeRent,
+            effectiveGrossBaseRent: calculatedEffectiveGrossBaseRent, totalTIAllowanceValue: calculatedTotalTIAllowanceValue,
+            netConstructionCostToTenant: calculatedNetConstructionCostToTenant, totalProjectedOutlay: calculatedTotalProjectedOutlay,
+            monthlyEffectiveRent: calculatedMonthlyEffectiveRent, annualEffectiveRentPerSF: calculatedAnnualEffectiveRentPerSF,
+          });
+        };
+
+        // Perform initial calculation on page load
+        useEffect(() => {
+          handleCalculate();
+        }, []);
+
+        // --- Input Field Component ---
+        const InputField = ({ label, id, type = "number", value, onChange, unit, min = 0 }) => (
+          <div className="flex flex-col space-y-1">
+            <label htmlFor={id} className="text-sm font-medium text-gray-700">{label}{unit && <span className="text-xs text-gray-500"> ({unit})</span>}</label>
+            <input
+              type={type} id={id} name={id} value={value} onChange={onChange} min={min}
+              className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+        );
+
+        // --- Summary Item Component ---
+        const SummaryItem = ({ label, value, isHighlighted = false }) => (
+          <div className={`flex justify-between items-center py-2 px-3 ${isHighlighted ? 'bg-indigo-50 rounded-md' : ''}`}>
+            <p className="text-sm text-gray-700">{label}:</p>
+            <p className={`text-sm font-semibold ${isHighlighted ? 'text-indigo-700' : 'text-gray-900'}`}>{formatCurrency(value)}</p>
+          </div>
+        );
+
+        const SummaryItemNonCurrency = ({ label, value, unit, isHighlighted = false }) => (
+          <div className={`flex justify-between items-center py-2 px-3 ${isHighlighted ? 'bg-indigo-50 rounded-md' : ''}`}>
+            <p className="text-sm text-gray-700">{label}:</p>
+            <p className={`text-sm font-semibold ${isHighlighted ? 'text-indigo-700' : 'text-gray-900'}`}>{value.toFixed(2)} {unit}</p>
+          </div>
+        );
+
+        return (
+          <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
+            <div className="max-w-4xl mx-auto">
+              <header className="mb-8 text-center">
+                <h1 className="text-3xl font-bold text-gray-800">Commercial Lease Cost Analyzer</h1>
+                <p className="text-sm text-gray-600 mt-1">Estimate the total cost of your commercial lease.</p>
+              </header>
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-lg">
+                  <h2 className="text-xl font-semibold text-gray-700 mb-6 border-b pb-2">Lease Parameters</h2>
+                  <div className="space-y-4">
+                    <InputField label="Lease Term" id="leaseTermMonths" value={leaseTermMonths} onChange={(e) => setLeaseTermMonths(e.target.value)} unit="Months" />
+                    <InputField label="Free Rent Period" id="freeRentMonths" value={freeRentMonths} onChange={(e) => setFreeRentMonths(e.target.value)} unit="Months" />
+                    <InputField label="Rentable Area" id="rentableSquareFeet" value={rentableSquareFeet} onChange={(e) => setRentableSquareFeet(e.target.value)} unit="Sq. Ft." />
+                    <InputField label="Annual Base Rental Rate" id="annualBaseRentalRatePerSF" value={annualBaseRentalRatePerSF} onChange={(e) => setAnnualBaseRentalRatePerSF(e.target.value)} unit="$/Sq. Ft./Year" />
+                    <InputField label="Tenant Improvement (TI) Allowance" id="tiAllowancePerSF" value={tiAllowancePerSF} onChange={(e) => setTiAllowancePerSF(e.target.value)} unit="$/Sq. Ft." />
+                    <InputField label="Estimated Construction Costs" id="estimatedConstructionCostsTotal" value={estimatedConstructionCostsTotal} onChange={(e) => setEstimatedConstructionCostsTotal(e.target.value)} unit="Total $" />
+                  </div>
+                  <div className="mt-6">
+                    <button
+                      onClick={handleCalculate}
+                      className="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Calculate
+                    </button>
+                  </div>
+                </div>
+                <div className="lg:col-span-3 bg-white p-6 rounded-lg shadow-lg">
+                  <h2 className="text-xl font-semibold text-gray-700 mb-6 border-b pb-2">Financial Summary</h2>
+                  <div className="space-y-2">
+                    <SummaryItem label="Total Gross Base Rent (Over Term)" value={summary.totalGrossBaseRent} />
+                    <SummaryItem label="Value of Free Rent" value={summary.valueOfFreeRent} />
+                    <SummaryItem label="Effective Gross Base Rent (After Free Rent)" value={summary.effectiveGrossBaseRent} isHighlighted={true}/>
+                    <div className="pt-4 mt-4 border-t">
+                      <SummaryItem label="Total Tenant Improvement (TI) Allowance Value" value={summary.totalTIAllowanceValue} />
+                      <SummaryItem label="Net Construction Cost to Tenant (After TI)" value={summary.netConstructionCostToTenant} />
+                    </div>
+                    <div className="pt-4 mt-4 border-t">
+                       <SummaryItem label="Total Projected Outlay (Rent + Net Construction)" value={summary.totalProjectedOutlay} isHighlighted={true} />
+                    </div>
+                    <div className="pt-4 mt-4 border-t">
+                      <SummaryItem label="Average Monthly Effective Rent" value={summary.monthlyEffectiveRent} />
+                      <SummaryItemNonCurrency label="Average Annual Effective Rent" value={summary.annualEffectiveRentPerSF} unit="$/Sq. Ft."/>
+                    </div>
+                    {leaseTermMonths <= 0 || rentableSquareFeet <= 0 ? (
+                       <p className="text-center text-red-500 mt-4 text-sm">Please enter a valid Lease Term and Rentable Area to see calculations.</p>
+                    ): null}
+                  </div>
+                </div>
+              </div>
+              <footer className="mt-12 text-center text-xs text-gray-500">
+                  <p>This calculator is for estimation purposes only. Consult with a financial advisor and real estate professional for actual lease negotiations.</p>
+              </footer>
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.render(<CommercialLeaseComparison />, document.getElementById('root'));
+    </script>
 </body>
 </html>
