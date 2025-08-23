@@ -38,7 +38,7 @@
         });
 
         // --- Calculation Logic ---
-        useEffect(() => {
+        const handleCalculate = () => {
           const term = Number(leaseTermMonths) || 0;
           const freeMonths = Number(freeRentMonths) || 0;
           const rsf = Number(rentableSquareFeet) || 0;
@@ -72,7 +72,12 @@
             netConstructionCostToTenant: calculatedNetConstructionCostToTenant, totalProjectedOutlay: calculatedTotalProjectedOutlay,
             monthlyEffectiveRent: calculatedMonthlyEffectiveRent, annualEffectiveRentPerSF: calculatedAnnualEffectiveRentPerSF,
           });
-        }, [leaseTermMonths, freeRentMonths, rentableSquareFeet, annualBaseRentalRatePerSF, tiAllowancePerSF, estimatedConstructionCostsTotal]);
+        };
+
+        // Perform initial calculation on page load
+        useEffect(() => {
+          handleCalculate();
+        }, []);
 
         // --- Input Field Component ---
         const InputField = ({ label, id, type = "number", value, onChange, unit, min = 0 }) => (
@@ -117,6 +122,14 @@
                     <InputField label="Annual Base Rental Rate" id="annualBaseRentalRatePerSF" value={annualBaseRentalRatePerSF} onChange={(e) => setAnnualBaseRentalRatePerSF(e.target.value)} unit="$/Sq. Ft./Year" />
                     <InputField label="Tenant Improvement (TI) Allowance" id="tiAllowancePerSF" value={tiAllowancePerSF} onChange={(e) => setTiAllowancePerSF(e.target.value)} unit="$/Sq. Ft." />
                     <InputField label="Estimated Construction Costs" id="estimatedConstructionCostsTotal" value={estimatedConstructionCostsTotal} onChange={(e) => setEstimatedConstructionCostsTotal(e.target.value)} unit="Total $" />
+                  </div>
+                  <div className="mt-6">
+                    <button
+                      onClick={handleCalculate}
+                      className="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Calculate
+                    </button>
                   </div>
                 </div>
                 <div className="lg:col-span-3 bg-white p-6 rounded-lg shadow-lg">
