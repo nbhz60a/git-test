@@ -2,10 +2,183 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My GitHub Site</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commercial Lease Cost Analyzer</title>
+    <!-- React and Babel for in-browser JSX transformation -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Custom configuration for Tailwind CSS
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              cyan: {
+                50: '#ecfeff', 100: '#cffafe', 200: '#a5f3fc', 300: '#67e8f9', 400: '#22d3ee',
+                500: '#06b6d4', 600: '#0891b2', 700: '#0e7490', 800: '#155e75', 900: '#164e63',
+              }
+            }
+          }
+        }
+      }
+    </script>
 </head>
-<body>
-    <h1>Hello, world!</h1>
-    <p>This is the first page in your new repo.</p>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      // --- Helper Functions ---
+      const formatCurrency = (value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+
+      // --- React Icons (as inline SVGs for simplicity) ---
+      const InfoIcon = () => (
+        <svg className="w-4 h-4 inline-block ml-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+      );
+
+      // --- Main Component ---
+      function CommercialLeaseComparison() {
+        // --- State ---
+        const [leaseTermMonths, setLeaseTermMonths] = useState(60);
+        const [freeRentMonths, setFreeRentMonths] = useState(3);
+        const [rentableSquareFeet, setRentableSquareFeet] = useState(5000);
+        const [annualBaseRentalRatePerSF, setAnnualBaseRentalRatePerSF] = useState(30);
+        const [tiAllowancePerSF, setTiAllowancePerSF] = useState(50);
+        const [estimatedConstructionCostsTotal, setEstimatedConstructionCostsTotal] = useState(300000);
+        const [summary, setSummary] = useState({});
+
+        // --- Calculation ---
+        useEffect(() => {
+          const term = Number(leaseTermMonths) || 0;
+          const freeMonths = Number(freeRentMonths) || 0;
+          const rsf = Number(rentableSquareFeet) || 0;
+          const annualRateSF = Number(annualBaseRentalRatePerSF) || 0;
+          const tiRateSF = Number(tiAllowancePerSF) || 0;
+          const constCosts = Number(estimatedConstructionCostsTotal) || 0;
+
+          if (term <= 0 || rsf <= 0) {
+            setSummary({ totalGrossBaseRent: 0, valueOfFreeRent: 0, effectiveGrossBaseRent: 0, totalTIAllowanceValue: 0, netConstructionCostToTenant: 0, totalProjectedOutlay: 0, monthlyEffectiveRent: 0, annualEffectiveRentPerSF: 0 });
+            return;
+          }
+
+          const monthlyBaseRentalRatePerSF = annualRateSF / 12;
+          const totalMonthlyBaseRentForAllSF = rsf * monthlyBaseRentalRatePerSF;
+          const calculatedTotalGrossBaseRent = totalMonthlyBaseRentForAllSF * term;
+          const calculatedValueOfFreeRent = totalMonthlyBaseRentForAllSF * Math.min(freeMonths, term);
+          const calculatedEffectiveGrossBaseRent = calculatedTotalGrossBaseRent - calculatedValueOfFreeRent;
+          const calculatedTotalTIAllowanceValue = tiRateSF * rsf;
+          const calculatedNetConstructionCostToTenant = Math.max(0, constCosts - calculatedTotalTIAllowanceValue);
+          const calculatedTotalProjectedOutlay = calculatedEffectiveGrossBaseRent + calculatedNetConstructionCostToTenant;
+          const actualRentPayingMonths = term - Math.min(freeMonths, term);
+          const calculatedMonthlyEffectiveRent = actualRentPayingMonths > 0 ? calculatedEffectiveGrossBaseRent / actualRentPayingMonths : 0;
+          const calculatedAnnualEffectiveRentPerSF = term > 0 ? (calculatedEffectiveGrossBaseRent / rsf) / (term / 12) : 0;
+
+          setSummary({
+            totalGrossBaseRent: calculatedTotalGrossBaseRent, valueOfFreeRent: calculatedValueOfFreeRent, effectiveGrossBaseRent: calculatedEffectiveGrossBaseRent,
+            totalTIAllowanceValue: calculatedTotalTIAllowanceValue, netConstructionCostToTenant: calculatedNetConstructionCostToTenant, totalProjectedOutlay: calculatedTotalProjectedOutlay,
+            monthlyEffectiveRent: calculatedMonthlyEffectiveRent, annualEffectiveRentPerSF: calculatedAnnualEffectiveRentPerSF,
+          });
+        }, [leaseTermMonths, freeRentMonths, rentableSquareFeet, annualBaseRentalRatePerSF, tiAllowancePerSF, estimatedConstructionCostsTotal]);
+
+        // --- Child Components ---
+        const InputField = ({ label, id, value, onChange, unit, ...props }) => (
+          <div>
+            <label htmlFor={id} className="text-sm font-medium text-slate-600 flex justify-between items-center">
+              <span>{label} <span className="text-xs text-slate-400">({unit})</span></span>
+            </label>
+            <input id={id} type="number" value={value} onChange={e => onChange(e.target.value)} className="mt-1 block w-full p-2.5 bg-slate-50 border border-slate-200 rounded-md shadow-sm focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition" {...props} />
+          </div>
+        );
+
+        const Slider = ({ label, id, value, onChange, unit, ...props }) => (
+          <div>
+            <label htmlFor={id} className="text-sm font-medium text-slate-600 flex justify-between items-center">
+              <span>{label} <span className="text-xs text-slate-400">({unit})</span></span>
+              <span className="font-bold text-cyan-600">{value}</span>
+            </label>
+            <input id={id} type="range" value={value} onChange={e => onChange(e.target.value)} className="mt-1 w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-cyan-500 [&::-webkit-slider-thumb]:rounded-full" {...props} />
+          </div>
+        );
+
+        const SummaryItem = ({ label, value, isHighlighted = false, tooltip }) => (
+          <div className={`flex justify-between items-center py-3 px-4 transition-colors duration-300 ${isHighlighted ? 'bg-cyan-50 rounded-lg' : 'border-b border-slate-100'}`}>
+            <p className="text-sm text-slate-600 flex items-center">{label} {tooltip && <InfoIcon />}</p>
+            <p className={`text-base font-semibold ${isHighlighted ? 'text-cyan-700' : 'text-slate-800'}`}>{formatCurrency(value)}</p>
+          </div>
+        );
+
+        const SummaryItemNonCurrency = ({ label, value, unit }) => (
+          <div className="flex justify-between items-center py-3 px-4 border-b border-slate-100">
+            <p className="text-sm text-slate-600">{label}</p>
+            <p className="text-base font-semibold text-slate-800">{value.toFixed(2)} <span className="text-sm font-normal text-slate-500">{unit}</span></p>
+          </div>
+        );
+
+        return (
+          <div className="min-h-screen p-4 sm:p-6 lg:p-8 font-sans text-slate-800">
+            <div className="max-w-6xl mx-auto">
+              <header className="mb-10 text-center">
+                <h1 className="text-4xl font-bold text-slate-900 tracking-tight">Commercial Lease Cost Analyzer</h1>
+                <p className="text-md text-slate-500 mt-2">An interactive tool to estimate the true cost of your next lease.</p>
+              </header>
+
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div className="lg:col-span-2 bg-white/70 backdrop-blur-sm p-6 border border-slate-200 rounded-xl shadow-sm">
+                  <h2 className="text-xl font-semibold text-slate-800 mb-6 border-b border-slate-200 pb-3">Lease Parameters</h2>
+                  <div className="space-y-5">
+                    <Slider label="Lease Term" id="leaseTermMonths" value={leaseTermMonths} onChange={setLeaseTermMonths} unit="Months" min="1" max="120" />
+                    <Slider label="Free Rent Period" id="freeRentMonths" value={freeRentMonths} onChange={setFreeRentMonths} unit="Months" min="0" max={leaseTermMonths} />
+                    <InputField label="Rentable Area" id="rentableSquareFeet" value={rentableSquareFeet} onChange={setRentableSquareFeet} unit="Sq. Ft." />
+                    <InputField label="Annual Base Rental Rate" id="annualBaseRentalRatePerSF" value={annualBaseRentalRatePerSF} onChange={setAnnualBaseRentalRatePerSF} unit="$/Sq. Ft./Year" />
+                    <InputField label="Tenant Improvement (TI) Allowance" id="tiAllowancePerSF" value={tiAllowancePerSF} onChange={setTiAllowancePerSF} unit="$/Sq. Ft." />
+                    <InputField label="Estimated Construction Costs" id="estimatedConstructionCostsTotal" value={estimatedConstructionCostsTotal} onChange={setEstimatedConstructionCostsTotal} unit="Total $" />
+                  </div>
+                </div>
+
+                <div className="lg:col-span-3 bg-white/70 backdrop-blur-sm p-6 border border-slate-200 rounded-xl shadow-sm">
+                  <h2 className="text-xl font-semibold text-slate-800 mb-6 border-b border-slate-200 pb-3">Financial Summary</h2>
+                  <div className="space-y-1">
+                    <SummaryItem label="Total Gross Base Rent" value={summary.totalGrossBaseRent} />
+                    <SummaryItem label="Value of Free Rent" value={summary.valueOfFreeRent} />
+                    <SummaryItem label="Effective Gross Base Rent" value={summary.effectiveGrossBaseRent} isHighlighted={true} />
+                    <SummaryItem label="Total TI Allowance" value={summary.totalTIAllowanceValue} />
+                    <SummaryItem label="Net Construction Cost to Tenant" value={summary.netConstructionCostToTenant} />
+                    <div className="pt-3 mt-3 border-t-2 border-cyan-200">
+                      <SummaryItem label="Total Projected Outlay" value={summary.totalProjectedOutlay} isHighlighted={true} />
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-slate-200">
+                      <SummaryItem label="Average Monthly Effective Rent" value={summary.monthlyEffectiveRent} />
+                      <SummaryItemNonCurrency label="Average Annual Effective Rent" value={summary.annualEffectiveRentPerSF} unit="$/Sq. Ft."/>
+                    </div>
+                    {(leaseTermMonths <= 0 || rentableSquareFeet <= 0) && (
+                       <p className="text-center text-red-500 pt-4 text-sm">Please enter a valid Lease Term and Rentable Area.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <footer className="mt-12 text-center text-xs text-slate-400">
+                  <p>This calculator is for estimation purposes only. Always consult with a qualified financial advisor and real estate professional before making any decisions.</p>
+              </footer>
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.render(<CommercialLeaseComparison />, document.getElementById('root'));
+    </script>
 </body>
 </html>
